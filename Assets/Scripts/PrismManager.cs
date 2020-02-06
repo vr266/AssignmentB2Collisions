@@ -147,6 +147,8 @@ public class PrismManager : MonoBehaviour
 
         prismObjA.transform.position += pushA;
         prismObjB.transform.position += pushB;
+
+        Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
     }
 
     #endregion
