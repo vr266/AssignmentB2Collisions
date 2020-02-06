@@ -133,6 +133,10 @@ public class PrismManager : MonoBehaviour
         return true;
     }
 
+    #endregion
+
+    #region Private Functions
+    
     private void ResolveCollision(PrismCollision collision)
     {
         var prismObjA = collision.a.prismObject;
