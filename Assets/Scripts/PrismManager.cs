@@ -24,7 +24,7 @@ public class PrismManager : MonoBehaviour
 
     void Start()
     {
-        Random.InitState(0);
+        Random.InitState(0);    //10 for no collision
 
         prismParent = GameObject.Find("Prisms");
         for (int i = 0; i < prismCount; i++)
@@ -79,6 +79,8 @@ public class PrismManager : MonoBehaviour
 
     IEnumerator Run()
     {
+        yield return null;
+
         while (true)
         {
             foreach (var prism in prisms)
@@ -107,16 +109,15 @@ public class PrismManager : MonoBehaviour
 
     private IEnumerable<PrismCollision> PotentialCollisions()
     {
-        for (int i = 0; i < prisms.Count; i++)
-            for (int j = i + 1; j < prisms.Count; j++)
-                if (Vector3.Distance(prismObjects[i].transform.position, prismObjects[j].transform.position) <= 1)
-                {
-                    var checkPrisms = new PrismCollision();
-                    checkPrisms.a = prisms[i];
-                    checkPrisms.b = prisms[j];
+        for (int i = 0; i < prisms.Count; i++) {
+            for (int j = i + 1; j < prisms.Count; j++) {
+                var checkPrisms = new PrismCollision();
+                checkPrisms.a = prisms[i];
+                checkPrisms.b = prisms[j];
 
-                    yield return checkPrisms;
-                }
+                yield return checkPrisms;
+            }
+        }
 
         yield break;
     }
@@ -125,14 +126,13 @@ public class PrismManager : MonoBehaviour
     {
         var prismA = collision.a;
         var prismB = collision.b;
-        var centroidA = prismA.points.Aggregate(Vector3.zero, (a, b) => a + b) / prismA.pointCount;
-        var centroidB = prismB.points.Aggregate(Vector3.zero, (a, b) => a + b) / prismB.pointCount;
+
         
-        collision.penetrationDepthVectorAB = new Vector3((Random.value - 0.5f) * 2, 0, (Random.value - 0.5f) * 2);
+        collision.penetrationDepthVectorAB = Vector3.zero;
 
         return true;
     }
-
+    
     #endregion
 
     #region Private Functions
@@ -150,7 +150,7 @@ public class PrismManager : MonoBehaviour
 
         Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
     }
-
+    
     #endregion
 
     #region Visualization Functions
@@ -185,19 +185,18 @@ public class PrismManager : MonoBehaviour
 
             var yMin = prism.midY - prism.height / 2 * prismTransform.localScale.y;
             var yMax = prism.midY + prism.height / 2 * prismTransform.localScale.y;
-            var prismPoints = prism.points.Select(p => prismTransform.position + Quaternion.AngleAxis(prismTransform.eulerAngles.y, Vector3.up) * new Vector3(p.x * prismTransform.localScale.x, 0, p.z * prismTransform.localScale.z)).ToArray();
 
             var wireFrameColor = prismColliding[prisms[prismIndex]] ? Color.red : Color.green;
 
-            foreach (var point in prismPoints)
+            foreach (var point in prism.points)
             {
                 Debug.DrawLine(point + Vector3.up * yMin, point + Vector3.up * yMax, wireFrameColor);
             }
 
-            for (int i = 0; i < prismPoints.Length; i++)
+            for (int i = 0; i < prism.pointCount; i++)
             {
-                Debug.DrawLine(prismPoints[i] + Vector3.up * yMin, prismPoints[(i + 1) % prismPoints.Length] + Vector3.up * yMin, wireFrameColor);
-                Debug.DrawLine(prismPoints[i] + Vector3.up * yMax, prismPoints[(i + 1) % prismPoints.Length] + Vector3.up * yMax, wireFrameColor);
+                Debug.DrawLine(prism.points[i] + Vector3.up * yMin, prism.points[(i + 1) % prism.pointCount] + Vector3.up * yMin, wireFrameColor);
+                Debug.DrawLine(prism.points[i] + Vector3.up * yMax, prism.points[(i + 1) % prism.pointCount] + Vector3.up * yMax, wireFrameColor);
             }
         }
     }
@@ -211,6 +210,17 @@ public class PrismManager : MonoBehaviour
         public Prism a;
         public Prism b;
         public Vector3 penetrationDepthVectorAB;
+    }
+
+    private class Tuple<K,V>
+    {
+        public K Item1;
+        public V Item2;
+
+        public Tuple(K k, V v) {
+            Item1 = k;
+            Item2 = v;
+        }
     }
 
     #endregion
