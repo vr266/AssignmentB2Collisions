@@ -186,7 +186,58 @@ public class PrismManager : MonoBehaviour
             // check if simplex contains the origin, update if not
             if (contOrigin() == true)
             {
-                return true;
+                //Starts EPA algo
+                while (true)
+                {
+                    float distance = float.PositiveInfinity;
+                    Vector3 normal = new Vector3(0, 0, 0);
+                    int index = 0;
+
+                    nearestEdge(simplex, ref distance, ref normal, ref index);
+
+                    //get support point in minkDiff
+                    Vector3 supp = mink(prismA, prismB, normal);
+
+                    float d = Vector3.Dot(supp, normal);
+
+                    //Check if simplex and minkDiff points converged
+                    if (d - distance <= Mathf.Epsilon)
+                    {
+
+                        collision.penetrationDepthVectorAB = normal * distance;
+                        return true;
+                    }
+                    else
+                    {
+                        //update simplex to include minkDiff point
+                        simplex.Insert(index, supp);
+                    }
+                }
+            }
+
+        }
+
+        //Finds edge in simplex that is nearest to origin
+        void nearestEdge(List<Vector3> simp, ref float closeDist, ref Vector3 closeNorm, ref int closeIndex)
+        {
+            for (int i = 0; i < simp.Count; i++)
+            {
+                int j = i == simp.Count - 1 ? 0 : i + 1;
+
+                Vector3 edge = simp[j] - simp[i];
+
+                //origin to first vector (simplex[i])
+                Vector3 ao = simp[i];
+                Vector3 norm = Vector3.Cross(Vector3.Cross(edge, ao), edge);
+                norm = Vector3.Normalize(norm);
+                float dist = Mathf.Abs(Vector3.Dot(ao, norm));
+
+                if (dist < closeDist)
+                {
+                    closeDist = dist;
+                    closeNorm = norm;
+                    closeIndex = j;
+                }
             }
 
         }
