@@ -127,7 +127,147 @@ public class PrismManager : MonoBehaviour
         var prismA = collision.a;
         var prismB = collision.b;
 
-        
+        // simplex 3 vector3 list
+        List<Vector3> simplex = new List<Vector3>();
+
+        // starting direction
+        Vector3 direction = new Vector3(-1, 0, 0);
+
+        // support function to return furthest point in prism in given direction
+        Vector3 support(Prism a, Vector3 d)
+        {
+            float max = -float.MaxValue;
+            int iPt = -1;
+
+            for (int i = 0; i < a.points.Length; i++)
+            {
+                float dot = Vector3.Dot(d, a.points[i]);
+                if (dot > max)
+                {
+                    max = dot;
+                    iPt = i;
+                }
+            }
+
+            return a.points[iPt];
+        }
+
+        // function to return furthest point on minkowski difference convex hull given direction
+        Vector3 mink(Prism a, Prism b, Vector3 d)
+        {
+            Vector3 ptA = support(a, d);
+            Vector3 ptB = support(b, -d);
+
+            return (ptA - ptB);
+        }
+
+        // Add the first point to the simplex
+        simplex.Add(mink(prismA, prismB, direction));
+
+        // Reverse the direction so we get the furthest point in opposite direction
+        direction = -direction;
+
+        // Start looping through simplexes with minkowski difference points
+
+        while (true)
+        {
+            // get new point in the current direction
+            Vector3 newPt = mink(prismA, prismB, direction);
+
+            // detect whether or not point goes past the origin, dot product must be positive
+            if (Vector3.Dot(newPt, direction) < 0)
+            {
+                return false;
+            }
+
+            // point is past origin so we can add it
+            simplex.Add(newPt);
+
+            // check if simplex contains the origin, update if not
+            if (contOrigin() == true)
+            {
+                return true;
+            }
+
+        }
+
+        bool contOrigin()
+        {
+            // if simplex only has 2 points
+            if (simplex.Count() == 2)
+            {
+                // get the points
+                Vector3 ptA = simplex[1];
+                Vector3 ptB = simplex[0];
+
+                // get the segments
+                Vector3 aOrig = new Vector3(0, 0, 0) - ptA;
+                Vector3 aB = ptB - ptA;
+
+                // adjust direction to be perp
+                direction = new Vector3(-aB[2], 0, aB[0]);
+
+                // if dot product of direction and aOrig less than 0, adjust to point at origin
+                if (Vector3.Dot(direction, aOrig) < 0)
+                {
+                    direction = -direction;
+                }
+
+                // keep editing simplex
+                return false;
+            }
+            else if (simplex.Count() == 3)
+            {
+                Vector3 ptA = simplex[2];
+                Vector3 ptB = simplex[1];
+                Vector3 ptC = simplex[0];
+
+                // get the segments
+                Vector3 aOrig = new Vector3(0, 0, 0) - ptA;
+                Vector3 aB = ptB - ptA;
+                Vector3 aC = ptC - ptA;
+
+                // adjust direction to be perp to segment away c
+                direction = new Vector3(-aB[2], 0, aB[0]);
+                if (Vector3.Dot(direction, ptC) > 0)
+                {
+                    direction = -direction;
+                }
+
+                // if perp vector from AB pointing toward origin we can remove c
+                if (Vector3.Dot(direction, aOrig) > 0)
+                {
+                    simplex.Remove(ptC);
+                    return false;
+                }
+
+                // readjust direction AC from B
+                direction = new Vector3(-aC[2], 0, aC[0]);
+                if (Vector3.Dot(direction, ptB) > 0)
+                {
+                    direction = -direction;
+                }
+
+                // if perp vector from AC pointing toward origin we can remove b
+                if (Vector3.Dot(direction, aOrig) > 0)
+                {
+                    simplex.Remove(ptB);
+                    return false;
+                }
+
+                // otherwise the origin is contained inside of the trianglge
+                return true;
+
+
+            }
+            else
+            {
+                return false;
+                Debug.Log("Simplex size not equal to 2 or 3");
+            }
+        }
+
+
         collision.penetrationDepthVectorAB = Vector3.zero;
 
         return true;
@@ -145,8 +285,17 @@ public class PrismManager : MonoBehaviour
         var pushA = -collision.penetrationDepthVectorAB / 2;
         var pushB = collision.penetrationDepthVectorAB / 2;
 
-        prismObjA.transform.position += pushA;
-        prismObjB.transform.position += pushB;
+        for (int i = 0; i < collision.a.pointCount; i++)
+        {
+            collision.a.points[i] += pushA;
+        }
+        for (int i = 0; i < collision.b.pointCount; i++)
+        {
+            collision.b.points[i] += pushB;
+        }
+        //prismObjA.transform.position += pushA;
+        //prismObjB.transform.position += pushB;
+
 
         Debug.DrawLine(prismObjA.transform.position, prismObjA.transform.position + collision.penetrationDepthVectorAB, Color.cyan, UPDATE_RATE);
     }
